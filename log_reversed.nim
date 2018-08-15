@@ -174,7 +174,7 @@ proc loop():void =
     while true:
         
         process(PATTERN)
-        debug("sleep:",INTERVAL)
+        ## debug("sleep:",INTERVAL)
         sleep(INTERVAL)
 
 proc main() =
