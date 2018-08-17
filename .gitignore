@@ -16,3 +16,10 @@ logs/
 *.log
 *.data
 *.db
+
+# 
+*.doc
+*.docx
+*.xls
+*.xlsx
+*.csv
