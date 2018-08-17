@@ -15,3 +15,4 @@ journey.json
 logs/
 *.log
 *.data
+*.db
