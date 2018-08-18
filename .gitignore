@@ -1,6 +1,8 @@
 # cache
 nimcache/
 
+backup/
+
 # bin
 *.exe
 *.pid
