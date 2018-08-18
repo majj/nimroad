@@ -24,6 +24,13 @@ proc test_influx():void =
     # json to table?
 
     # datatype
+    
+    echo db.getVersion()
+    echo ">>"
+    echo "query:", db.query("eim","""select max(i) from nt3 """)
+    echo ">>>"
+    
+    
     let data_dict = {"i":"int", "j":"str","k":"float"}.toTable
 
     var line:LineProtocol

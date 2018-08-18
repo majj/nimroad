@@ -26,6 +26,7 @@ def main(conf):
         z = yaml.load(f1)
     elif fmt == "toml":
         y = toml.load(f)
+        print(toml.dumps(y))
     else:
         raise(fmt)
         
@@ -51,14 +52,20 @@ def main2(conf):
     y = yaml2.load(f)
     yaml2.explicit_start = True
     #yaml.dump(y, sys.stdout)
-    yaml2.indent(sequence=2, offset=2)
+    yaml2.indent(mapping=4, sequence=4, offset=2)
     yaml2.dump(y, sys.stdout)
     
 if __name__ == "__main__":
     
     conf = r'mts2.yaml'
     conf = r'watchman1.toml'
+
+    conf = r'a.toml'
     
-    conf = r'mts3.yaml'
+    #main(conf)
+    
+    conf = r's3.yaml'
     
     main2(conf)
+    
+    

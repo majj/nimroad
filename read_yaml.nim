@@ -4,7 +4,6 @@
 ## 
 ##  patch for:
 ##  dom.nim
-##  parser.nim
 ##  stream.nim
 ##
 ##  add:
@@ -15,28 +14,22 @@
 ## yaml checker in python: check_conf.py
 ##
 
-
 import json
+import tables
 import typetraits
 
-import yaml.serialization, yaml.presenter, streams
-import yaml
+#import yaml.serialization, yaml.presenter
+#import yaml
+#import streams
 
-proc test():void = 
+import lib.influx_schema
+    
+proc test(fn: string):Table[string, string] = 
 
-    var fs = newFileStream("mts.yaml", fmRead)
-
-    let yaml_str = fs.readAll()
-    let parser = newYamlParser()
-
-    var s = parser.parse(yaml_str)
-    var yamlResult = constructJson(s)
-
-    let n = yamlResult
+    let n =yaml2json(fn)
     echo n[0]
 
     #echo n.type.name
-
 
     let m = n[0]
     echo m.type.name
@@ -45,16 +38,26 @@ proc test():void =
 
     if "tags" in m:
         echo m["tags"]
-
+    
+    var tab = initTable[string, string]()
+    #tab = {}.toTable
     for k,v in pairs( m["fields"] ):
         echo k, ":", v
         echo v["type"]
+        tab[k] = getStr(v["type"])
         echo "type:", ($v["type"]).type.name
 
-
-    fs.close()
-    
-    
+    return tab
+   
 if isMainModule:
-    test()
+    
+    var fn: string = "nt3.yaml"
+    
+    let data = yaml2json(fn)
+    
+    let t = get_datatype(data[0])
+    
+    echo t    
+    
+    discard test(fn)
     
