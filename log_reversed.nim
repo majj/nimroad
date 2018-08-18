@@ -18,12 +18,11 @@ import times
 ##  import osproc
 ##  import winlean # for windows
 
-import logging
 import parsetoml
-
 import daemon
 
-import utils
+import lib.logging
+import lib.utils
 
 
 ###################################################################
@@ -177,8 +176,14 @@ proc loop():void =
         ## debug("sleep:",INTERVAL)
         sleep(INTERVAL)
 
-proc main() =
+proc main():void =
 
+    info("start watchman...")
+    loop()
+        
+proc main_daemonize():void =
+    # BUG: focked many process when deamonize
+    
     info("start watchman...")
     
     let main_pid = GetCurrentProcessId() 

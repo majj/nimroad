@@ -13,4 +13,4 @@ please create logs/ manually.
 
 - data_msgpack: msgpack to json
 
-- crypo_na£º libsodium
+- crypo_na: libsodium

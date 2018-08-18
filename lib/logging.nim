@@ -51,11 +51,17 @@
 
 import strutils, times
 
-## nim utils 
-import utils
-
 when not defined(js):
   import os
+
+when defined(windows):
+    proc GetCurrentProcessId(): int32 {.stdcall, dynlib: "kernel32",
+                                        importc: "GetCurrentProcessId".}
+else :
+    from posix import getpid
+      
+    proc  GetCurrentProcessId():
+        getpid()
 
 type
   Level* = enum  ## logging level
