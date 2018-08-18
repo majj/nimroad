@@ -12,3 +12,5 @@ please create logs/ manually.
 - ak_client: AK client and AK server simulator(py)
 
 - data_msgpack: msgpack to json
+
+- crypo_na£º libsodium
