@@ -5,16 +5,20 @@
 ##  
 ##  send data to influxdb(cluster)
 ##  
-##  if sink failed then retry n times.
-##  all failed then save data to redis (retry queue)
+##  if sink failed then save data to sqlite (retry queue)
 ##  when send failed,send alert(smtp)
-##  ping influxdb when there is communication issue.
+##  when failed then ping influxdb.
 ##
 
 import os
 import strutils
+import times
+import asyncdispatch
+
+import typetraits
 
 import parsetoml
+import redis
 
 import lib.logging
 import lib.utils
@@ -52,40 +56,97 @@ let cLogger = get_clogger(log_conf)
 logging.addHandler(cLogger)
 
 var msgs: Channel[string]
+var output: Channel[string]
+
 
 # timer for heartbeat
-proc timer(interval: int) {.thread.} = 
+proc timer(config: TomlValueRef) {.thread.} = 
 
-    let line = "."
-    #let interval = 2000
+    let line  = "."
+    let interval = 2000
     while true:
         
         msgs.send(line)
         echo getThreadID(),":sent"
         sleep(interval)
 
-proc worker(val: int) {.thread.} = 
+proc worker(config: TomlValueRef) {.thread.} = 
 
+    let redis_conf = config["redis"]
+     
+    let redis_host = parsetoml.getStr(redis_conf["host"],"localhost")
+    let redis_hbkey = parsetoml.getStr(redis_conf["hbkey"],"heartbeat")
+    let redis_dqkey = parsetoml.getStr(redis_conf["dqkey"],"data_queue")
+
+    var redis_enable = parsetoml.getBool(redis_conf["enable"],false)
+    
+    var red:AsyncRedis
+    
+    if redis_enable:
+        try:
+            red = waitFor redis.openAsync(redis_host, port=Port 6379)
+        except:
+            error("can't open redis")
+            redis_enable = false
+            
     while true:
-        var msg = msgs.recv()
-        echo getThreadID(), ":",msg, val
+        try:
+            var msg = msgs.recv()
+            echo getThreadID(), ":",msg
+            
+            var time_str:string = format(now(), "yyyy-MM-dd'T'HH:mm:sszzz")
+            output.send(time_str)
+            #echo getThreadID(), ":",time_str
+            waitFor red.setk(redis_hbkey, time_str)
+        except:
+            error("")
+        
+proc sink(config: TomlValueRef){.thread.} = 
+    
+    # get data and send to influxdb, when failed then save to sqlite
+    
+    while true:
+        try:
+            var output = output.recv()
+            echo "sink",output
+            sleep(1000)
+        except:
+            error("")
 
 msgs.open()  # open channel
+output.open()
 
 # main
 proc main():void = 
 
     info("start...")
     
-    var timer_thread = Thread[int]()
-    var worker_thread = Thread[int]()
+    var timer_thread = Thread[TomlValueRef]()
+    var worker_thread = Thread[TomlValueRef]()
+    var sink_thread = Thread[TomlValueRef]()
 
-    createThread[int](timer_thread, timer, 1000)
-    createThread[int](worker_thread, worker, 1000)
-
+    echo timer_thread.type.name
+    echo worker_thread.type.name
+    echo sink_thread.type.name
+    
+    createThread[TomlValueRef](timer_thread, timer, config)
+    createThread[TomlValueRef](worker_thread, worker, config)
+    createThread[TomlValueRef](sink_thread, sink, config)
+    
+    var workers_a: seq[Thread[TomlValueRef]]
+    
+    workers_a = @[timer_thread, worker_thread, sink_thread]
+    
     #joinThreads(timer_thread, worker_thread)    
     
     while true:
+        
+        ##  echo "timer_thread:",timer_thread.running()
+        ##  echo "worker_thread:",worker_thread.running()
+        ##  echo "sink_thread:",sink_thread.running()
+        
+        for item in workers_a:
+            echo item.running()
         
         sleep(1000)
 
