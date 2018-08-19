@@ -20,7 +20,14 @@ proc get_config*(toml_fn: string): TomlValueRef =
     return config
 
 # helper for set logger
-proc get_logger*(log_conf: TomlValueRef): RollingFileLogger = 
+
+proc get_clogger*(log_conf: TomlValueRef): ConsoleLogger =
+
+    var clogger = logging.newConsoleLogger(lvlAll, "($datetime) [$levelid] -- $appname: ")
+    
+    return clogger
+
+proc get_rlogger*(log_conf: TomlValueRef): RollingFileLogger = 
 
     let fmtStr = parsetoml.getStr(log_conf["fmt"], "($datetime) [$levelid] -- $appname: ") 
     let log_file = parsetoml.getStr(log_conf["log_file"], "app.log")

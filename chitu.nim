@@ -24,11 +24,13 @@ when defined(windows):
 else:
     let sep = "/"
 
+####################################################################
+##prepare
+
 # getCurrentDir
 #let app_name = getAppFilename()    
 
 #get config path
-
 let path = getAppDir()
 let config_path =  join([path, "conf", "watchman.toml"], sep=sep)
 
@@ -43,29 +45,30 @@ echo toTomlString(config["app"])
 
 let log_conf = config["logging"]
 
-let rLogger = get_logger(log_conf)
+let rLogger = get_rlogger(log_conf)
+logging.addHandler(rLogger)
 
-logging.addHandler(rLogger)    
-
+let cLogger = get_clogger(log_conf)
+logging.addHandler(cLogger)
 
 var msgs: Channel[string]
 
 # timer for heartbeat
-proc timer():void = 
+proc timer(interval: int) {.thread.} = 
 
     let line = "."
-    let interval = 2000
+    #let interval = 2000
     while true:
         
         msgs.send(line)
-
+        echo getThreadID(),":sent"
         sleep(interval)
 
-proc worker():void = 
+proc worker(val: int) {.thread.} = 
 
     while true:
         var msg = msgs.recv()
-        echo msg
+        echo getThreadID(), ":",msg, val
 
 msgs.open()  # open channel
 
@@ -74,13 +77,17 @@ proc main():void =
 
     info("start...")
     
-    var timer_thread = Thread[void]()
-    var worker_thread = Thread[void]()
+    var timer_thread = Thread[int]()
+    var worker_thread = Thread[int]()
 
-    createThread(timer_thread, timer)
-    createThread(worker_thread, worker)
+    createThread[int](timer_thread, timer, 1000)
+    createThread[int](worker_thread, worker, 1000)
 
-    joinThreads(timer_thread, worker_thread)    
+    #joinThreads(timer_thread, worker_thread)    
+    
+    while true:
+        
+        sleep(1000)
 
 # run main
 if isMainModule:
