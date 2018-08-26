@@ -5,6 +5,15 @@
 
 ## watchman for reversed log file
 
+# rejistry file for filebeat:
+#
+# [{"source":"C:\\Temp\\filebeat-6.2.4-windows-x86_64\\log\\test.log",
+#   "offset":2046,
+#   "timestamp":"2018-05-29T23:34:59.4767001+08:00",
+#   "ttl":-2,
+#   "type":"log",
+#   "FileStateOS":{"idxhi":2621440,"idxlo":300667,"vol":2794401243}}]
+
 import algorithm
 import glob
 import os
@@ -108,7 +117,7 @@ proc process_new_content(path:string, seed:int64):void =
             let lines = content.splitLines().reversed()
        
             for line in lines:
-                fstream.write(line&"\r\n")
+                fstream.write(line&"\r\n") # or \n ?
         else:
             info("process")
             
@@ -136,7 +145,7 @@ proc process(pattern:string):void =
         return
         
     var update:bool = false
-    var jsize:int = 0
+    var offset:int = 0
     
     for path, kind in walkGlobKinds(pattern):
         
@@ -148,16 +157,17 @@ proc process(pattern:string):void =
             
             var node = journey[path]
             
-            jsize = node["size"].getInt()
+            offset = node["offset"].getInt()
             
-            let size_diff:int = size - jsize
+            let size_diff:int = size - offset
             
             if size_diff > 0:
                 
                 process_new_content(path, size_diff)
                 
+                echo file_info.id.device, file_info.id.file
                 journey[path] = %*{"id":file_info.id.file, 
-                   "size":size, 
+                   "offset":size, 
                    "lwtime":file_info.lastWriteTime.toUnix()}
                    
                 update = true
@@ -166,7 +176,7 @@ proc process(pattern:string):void =
             process_new_content(path, size)
             
             journey[path] = %*{"id":file_info.id.file, 
-               "size":size, 
+               "offset":size, 
                "lwtime":file_info.lastWriteTime.toUnix()}
             
             update = true

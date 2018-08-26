@@ -2,6 +2,7 @@
 nimcache/
 
 backup/
+test/
 
 # bin
 *.exe
