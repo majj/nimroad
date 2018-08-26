@@ -14,7 +14,7 @@ import os
 import strutils
 import times
 import asyncdispatch
-
+import json
 import typetraits
 
 import parsetoml
@@ -36,7 +36,7 @@ else:
 
 #get config path
 let path = getAppDir()
-let config_path =  join([path, "conf", "watchman.toml"], sep=sep)
+let config_path =  join([path, "conf", "chitu.toml"], sep=sep)
 
 #create logs/ folder
 let log_path =  join([path, "logs"], sep=sep)
@@ -46,6 +46,9 @@ discard existsOrCreateDir(log_path)
 let config = get_config(config_path)
 
 echo toTomlString(config["app"])
+
+# get array from toml
+let influxdb_conf =  getElems(config["influxdb"])
 
 let log_conf = config["logging"]
 
@@ -101,7 +104,7 @@ proc worker(config: TomlValueRef) {.thread.} =
         except:
             error("")
         
-proc sink(config: TomlValueRef){.thread.} = 
+proc sink_t(config: TomlValueRef){.thread.} = 
     
     # get data and send to influxdb, when failed then save to sqlite
     
@@ -117,7 +120,7 @@ msgs.open()  # open channel
 output.open()
 
 # main
-proc main():void = 
+proc main_t():void = 
 
     info("start...")
     
@@ -131,7 +134,7 @@ proc main():void =
     
     createThread[TomlValueRef](timer_thread, timer, config)
     createThread[TomlValueRef](worker_thread, worker, config)
-    createThread[TomlValueRef](sink_thread, sink, config)
+    createThread[TomlValueRef](sink_thread, sink_t, config)
     
     var workers_a: seq[Thread[TomlValueRef]]
     
@@ -150,6 +153,52 @@ proc main():void =
         
         sleep(1000)
 
+proc get_data(): seq[JsonNode] = 
+
+    let v1: JsonNode = %* {"measurement":"mts", "tags":{"eqptno":"mts02"}, 
+                           "fields":{"val1":"2i","val2":"3.3","val3":"i"}, "time":100}
+                           
+    let v2: JsonNode = %* {"measurement":"mts", "tags":{"eqptno":"mts02"}, 
+                           "fields":{"val1":"2i","val2":"3.3","val3":"i"}, "time":200}
+    
+    result.add(v1)    
+    result.add(v2)
+
+proc sink(data: seq[JsonNode]): seq[bool] = 
+
+    if len(data) > 0:
+        echo ">0"
+    else:
+        warn("PING")
+
+    for db_conf in influxdb_conf:
+        
+        echo db_conf
+        
+        for item in data:
+            echo item
+
+        
+    result.add(true)
+    
+proc main():void = 
+    
+    info("start")
+    info("single thread")
+    
+    while true:
+        
+        try:
+            let data = get_data()
+            
+            let status = sink(data)
+            
+            sleep(1000)
+            
+        except:
+            error("??")
+    
+    
 # run main
 if isMainModule:
     main()
