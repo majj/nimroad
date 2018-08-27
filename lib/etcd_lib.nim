@@ -15,9 +15,10 @@ import times
 import etcd_client
 import parsetoml
 
+const hb_base = "heartbeat/"
 
 type 
-    DBClient = ref object of RootObj
+    DBClient* = ref object of RootObj
         config: TomlValueRef
         client: EtcdClient
 
@@ -43,11 +44,13 @@ proc reconnect*(self:DBClient):void =
     let client = new_etcd_client(hostname=hostname, port=port, 
                                  username=username, password=password, failover=false)
 
-proc heartbeat*(self:DBClient, path:string):void = 
+proc heartbeat*(self:DBClient, path:string):string = 
 
     let t = format(now(), "YYYY-MM-dd'T'HH:mm:ss")
 
-    self.client.set(path, t) # or update
+    self.client.set(hb_base & path, t) # or update
+    
+    return t
 
 
 proc test(config: TomlValueRef):void = 
@@ -56,13 +59,13 @@ proc test(config: TomlValueRef):void =
     
     let path = "heartbeat/eqpt01"
     
-    db.heartbeat(path)
+    discard db.heartbeat(path)
     
     sleep(6000)
     
     db.reconnect()
     
-    db.heartbeat(path)    
+    discard db.heartbeat(path)    
     
     
 when isMainModule:
