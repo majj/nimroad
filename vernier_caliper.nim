@@ -73,21 +73,27 @@ proc main():void =
 
     app.init()
 
-    var window = newWindow()
+    ##  var timer: Timer
+    
+    var window = newWindow("Vernier caliper")
 
     var container = newLayoutContainer(Layout_Vertical)
     window.add(container)
 
+    var inputContainer = newLayoutContainer(Layout_Horizontal)
+    container.add(inputContainer)
 
-    var label = newLabel("扫描...         # 请切换至英文输入法！ #")
-    container.add(label)
+    var label = newLabel("扫描 ")
+    inputContainer.add(label)
 
     var textBox = newTextBox("")
-    container.add(textBox)
-    textBox.focus()
+    inputContainer.add(textBox)
+    
+    var label2 = newLabel("    注意切换至英文输入法！ ")
+    inputContainer.add(label2)    
 
-    var label2 = newLabel("历史记录")
-    container.add(label2)
+    var label3 = newLabel("历史记录")
+    container.add(label3)
 
     var textArea = newTextArea("")
     container.add(textArea)
@@ -103,6 +109,8 @@ proc main():void =
         if event.key == Key_Return:
             
             # send to redis here
+            if textBox.text == "":
+                return
             
             #textArea.addLine(textBox.text)
             createdon = format(now(),"yyyy-mm-dd'T'hh:mm:ss")
@@ -122,15 +130,22 @@ proc main():void =
         
     #textBox.onTextChange = proc(event: TextChangeEvent) =
 
-    var button = newButton("清除记录")
+    var button = newButton("清除记录:")
     container.add(button)
 
     button.onClick = proc(event: ClickEvent) = 
         textArea.text = ""
         textBox.focus()
+        
+    ##  proc work(event: TimerEvent) =
+        ##  timer.stop()
+        ##  info("work...")
+        ##  timer = startTimer(3000, work)
+        
+    ##  timer = startTimer(3000, work)
 
     window.show()
-
+    textBox.focus()
     app.run()
 
 
