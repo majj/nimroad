@@ -34,6 +34,8 @@ let redis_conf = config["redis"]
  
 let redis_host = parsetoml.getStr(redis_conf["host"],"localhost")
 let redis_port = parsetoml.getInt(redis_conf["port"],6379)
+let redis_vckey = parsetoml.getStr(redis_conf["vckey"],"vckey")
+let redis_queue = parsetoml.getStr(redis_conf["data_queue"],"data_queue")
 
 ###################################################################
 # set logging
@@ -129,9 +131,9 @@ proc main():void =
             
             try:
                 # write data to redis
-                waitFor redc.setk("vernier_caliper:value", textBox.text)
-                waitFor redc.setk("vernier_caliper:time", createdon)
-                discard waitFor redc.lPush("vc_list", textBox.text)
+                waitFor redc.setk(join([redis_vckey,"value"], sep=":"), textBox.text)
+                waitFor redc.setk(join([redis_vckey,"time"], sep=":"), createdon)
+                discard waitFor redc.lPush(redis_queue, textBox.text)
             except:
                 error("redis error")
                 
