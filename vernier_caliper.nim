@@ -69,8 +69,13 @@ proc main():void =
     
     info("start...")
     
-    var redc = waitFor redis.openAsync(redis_host, Port(redis_port))
-
+    var redc: AsyncRedis
+    
+    try:
+        redc = waitFor redis.openAsync(redis_host, Port(redis_port))
+    except:
+        error("can't open redis")
+        
     app.init()
 
     ##  var timer: Timer
@@ -95,6 +100,12 @@ proc main():void =
     var label3 = newLabel("历史记录")
     container.add(label3)
 
+    var textShow = newTextBox("0.00")
+    container.add(textShow)
+    textShow.editable = false
+    textShow.fontSize = 80
+    textShow.fontFamily = "Tahoma"
+
     var textArea = newTextArea("")
     container.add(textArea)
     textArea.editable = false
@@ -113,12 +124,17 @@ proc main():void =
                 return
             
             #textArea.addLine(textBox.text)
+            textShow.text = textBox.text
             createdon = format(now(),"yyyy-mm-dd'T'hh:mm:ss")
             
-            waitFor redc.setk("vernier_caliper:value", textBox.text)
-            waitFor redc.setk("vernier_caliper:time", createdon)
-            discard waitFor redc.lPush("vc_list", textBox.text)
-            
+            try:
+                # write data to redis
+                waitFor redc.setk("vernier_caliper:value", textBox.text)
+                waitFor redc.setk("vernier_caliper:time", createdon)
+                discard waitFor redc.lPush("vc_list", textBox.text)
+            except:
+                error("redis error")
+                
             textArea.text = createdon & " -> " & textBox.text & "\p" & textArea.text
             
             debug(textBox.text)
@@ -129,6 +145,9 @@ proc main():void =
             
         
     #textBox.onTextChange = proc(event: TextChangeEvent) =
+
+    textShow.onClick = proc(event: ClickEvent) = 
+        textBox.focus()
 
     var button = newButton("清除记录:")
     container.add(button)
