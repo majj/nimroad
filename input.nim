@@ -32,9 +32,12 @@ discard existsOrCreateDir(log_path)
 let config = get_config(config_path)
 
 let app_conf = config["app"]
+
 let MAX_LENGTH_VC = parsetoml.getInt(app_conf["max_length_vc"], 6)
 let LENGTH_ID = parsetoml.getInt(app_conf["length_id"], 6)
+let ws = parsetoml.getStr(app_conf["ws"], "10")
 
+# id - empNo
 let operators_db = config["operators"]
 
 # redis
@@ -95,19 +98,20 @@ proc main():void =
     inputContainer.add(label)
 
     # input
-    var textBox = newTextBox("")
-    inputContainer.add(textBox)
+    var inputTextBox = newTextBox("")
+    inputContainer.add(inputTextBox)
     
-    var wslabel = newLabel("工位 ")
-    #wslabel.width = 30
+    var wslabel = newLabel(" 工位 ")
+    #wslabel.width = 30    
     inputContainer.add(wslabel)
 
     # work station No
-    var wsTextBox = newTextBox("10")
-    wsTextBox.width = 60
-    inputContainer.add(wsTextBox)
+    var wsinputTextBox = newTextBox(ws)
+    wsinputTextBox.width = 60
+    wsinputTextBox.editable = false
+    inputContainer.add(wsinputTextBox)
     
-    var label2 = newLabel("    注意切换至英文输入法！ ")
+    var label2 = newLabel("""    注意切换至英文输入法！ """)
     inputContainer.add(label2)    
 
     var label3 = newLabel("历史记录")
@@ -119,55 +123,70 @@ proc main():void =
     textShow.fontSize = 80
     textShow.fontFamily = "Tahoma"
 
-    var textArea = newTextArea("")
-    container.add(textArea)
-    textArea.editable = false
+    var logTextArea = newTextArea("")
+    container.add(logTextArea)
+    logTextArea.editable = false
 
-    textArea.onClick = proc(event: ClickEvent) = 
-        textBox.focus()
+    var footContainer = newLayoutContainer(Layout_Horizontal)
+    container.add(footContainer)
+
+    var button = newButton("清除记录")
+    footContainer.add(button)
+
+    var sepLabel = newLabel("  ::  ")
+    footContainer.add(sepLabel)    
     
-    var createdon: string
-    
-    textBox.onKeyDown = proc(event: KeyboardEvent) = 
+    var statusLabel = newLabel("")
+    footContainer.add(statusLabel)
+   
+    ###########################################################################
+    var createdon: string  
+    # inputTextBox.onTextChange = proc(event: TextChangeEvent) =
+
+    inputTextBox.onKeyDown = proc(event: KeyboardEvent) = 
 
         if event.key == Key_Return:
             
             # send to redis here
-            if textBox.text == "":
+            if inputTextBox.text == "":
                 return
             
-            #textArea.addLine(textBox.text)
-            textShow.text = textBox.text
+            # logTextArea.addLine(inputTextBox.text)
+            textShow.text = inputTextBox.text
+            
+            # set status text
+            statusLabel.text = inputTextBox.text
+            
             createdon = format(now(),"yyyy-mm-dd'T'HH:mm:ss")
             
             if db.enable:
                 # write data to redis
                 
                 # 0.00 - 156.08
-                let text_len = len(textBox.text)
-                let ws = wsTextBox.text
+                let text_len = len(inputTextBox.text)
+                #let ws = wsinputTextBox.text
                 var val : JsonNode#float
                 
                 # value from VC
                 if text_len <= MAX_LENGTH_VC:
-                    #val = parseFloat(textBox.text)
-                    val = %* {"time":createdon, "value": textBox.text, "ws":ws, "type":"vc"}
+                    #val = parseFloat(inputTextBox.text)
+                    val = %* {"time":createdon, "value": inputTextBox.text, "ws":ws, "type":"vc"}
                 
                 # value from Card
                 elif text_len == LENGTH_ID:
                     
                     var emp_no:string
                     
-                    if operators_db.hasKey(textBox.text):
+                    if operators_db.hasKey(inputTextBox.text):
                         # get operator No
-                        emp_no = parsetoml.getStr(operators_db[textBox.text], "000")
+                        emp_no = parsetoml.getStr(operators_db[inputTextBox.text], "000")
                     else:
                         emp_no = "who"
                         
-                    val = %* {"time":createdon, "card_id": textBox.text, "emp_no":emp_no, "ws":ws, "type":"id"}
+                    val = %* {"time":createdon, "card_id": inputTextBox.text, "emp_no":emp_no, "ws":ws, "type":"id"}
                     
                 else:
-                    val = %* {"time":createdon, "value": textBox.text, "ws":ws, "type":"unknown"}
+                    val = %* {"time":createdon, "value": inputTextBox.text, "ws":ws, "type":"unknown"}
                     
                 db.set(join([redis_key,"value"], sep=":"), $val)
                 db.set(join([redis_key,"time"], sep=":"), createdon)
@@ -175,34 +194,30 @@ proc main():void =
                 
             #except:
             #    error("redis error")
-                
-            textArea.text = createdon & " -> " & textBox.text & "\p" & textArea.text
             
-            debug(textBox.text)
+            # log
+            logTextArea.text = createdon & " -> " & inputTextBox.text & "\p" & logTextArea.text
             
-            textBox.text = ""
-            textBox.focus()            
+            debug(inputTextBox.text)
+            
+            inputTextBox.text = ""
+            inputTextBox.focus()
+            
+    #########################
+    logTextArea.onClick = proc(event: ClickEvent) = 
+        inputTextBox.focus()
         
-    #textBox.onTextChange = proc(event: TextChangeEvent) =
-
+    #########################    
     textShow.onClick = proc(event: ClickEvent) = 
-        textBox.focus()
-
-    var footContainer = newLayoutContainer(Layout_Horizontal)
-    container.add(footContainer)
-
-    var button = newButton("清除记录:")
-    footContainer.add(button)
-
-    var sepLabel = newLabel("  ::  ")
-    footContainer.add(sepLabel)    
+        inputTextBox.focus()
+        
+    wsinputTextBox.onClick = proc(event: ClickEvent) = 
+        inputTextBox.focus()
     
-    var statusLabel = newLabel("")
-    footContainer.add(statusLabel)    
-
+    #########################
     button.onClick = proc(event: ClickEvent) = 
-        textArea.text = ""
-        textBox.focus()
+        logTextArea.text = ""
+        inputTextBox.focus()
         
     ##  proc work(event: TimerEvent) =
         ##  timer.stop()
@@ -212,7 +227,8 @@ proc main():void =
     ##  timer = startTimer(3000, work)
 
     window.show()
-    textBox.focus()
+    
+    inputTextBox.focus()
     app.run()
 
 
