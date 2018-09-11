@@ -1,20 +1,20 @@
-# gui01.nim
+# input.nim
+
+##  gather data from keyboard like devices
 
 import os
-import asyncdispatch
+
 import times
 import strutils
 
-
 import nigui
 import parsetoml
-import redis
-
+#import redis
 import json
 
+import lib.db
 import lib.logging
 import lib.utils
-
 
 when defined(windows):
     let sep = "\\"
@@ -22,7 +22,7 @@ else:
     let sep = "/"
     
 let path = getAppDir()
-let config_path =  join([path, "conf", "vc.toml"], sep=sep)
+let config_path =  join([path, "conf", "input.toml"], sep=sep)
 
 #create logs/ folder
 let log_path =  join([path, "logs"], sep=sep)
@@ -31,14 +31,18 @@ discard existsOrCreateDir(log_path)
 
 let config = get_config(config_path)
 
+let app_conf = config["app"]
+let MAX_LENGTH_VC = parsetoml.getInt(app_conf["max_length_vc"], 6)
+let LENGTH_ID = parsetoml.getInt(app_conf["length_id"], 6)
 
+let operators_db = config["operators"]
+
+# redis
 let redis_conf = config["redis"]
- 
-let redis_host = parsetoml.getStr(redis_conf["host"],"localhost")
-let redis_port = parsetoml.getInt(redis_conf["port"],6379)
-let redis_vckey = parsetoml.getStr(redis_conf["vckey"],"vckey")
-let redis_queue = parsetoml.getStr(redis_conf["data_queue"],"data_queue")
 
+let redis_key = parsetoml.getStr(redis_conf["vckey"],"vckey")       
+let redis_queue = parsetoml.getStr(redis_conf["data_queue"],"data_queue")   
+    
 ###################################################################
 # set logging
 let log_conf = config["logging"]
@@ -67,21 +71,11 @@ var rLogger = logging.newRollingFileLogger(log_file, mode = fmAppend, levelThres
 
 logging.addHandler(rLogger)
 
-
-
 proc main():void = 
     
     info("start...")
     
-    var redc: AsyncRedis
-    
-    var redis_enable = false
-    
-    try:
-        redc = waitFor redis.openAsync(redis_host, Port(redis_port))
-        redis_enable = true
-    except:
-        error("can't open redis")
+    var db = newDB(config)
         
     app.init()
 
@@ -144,9 +138,9 @@ proc main():void =
             
             #textArea.addLine(textBox.text)
             textShow.text = textBox.text
-            createdon = format(now(),"yyyy-mm-dd'T'hh:mm:ss")
+            createdon = format(now(),"yyyy-mm-dd'T'HH:mm:ss")
             
-            if redis_enable:
+            if db.enable:
                 # write data to redis
                 
                 # 0.00 - 156.08
@@ -154,17 +148,30 @@ proc main():void =
                 let ws = wsTextBox.text
                 var val : JsonNode#float
                 
-                if text_len < 7:
+                # value from VC
+                if text_len <= MAX_LENGTH_VC:
                     #val = parseFloat(textBox.text)
                     val = %* {"time":createdon, "value": textBox.text, "ws":ws, "type":"vc"}
-                elif text_len == 8:
-                    val = %* {"time":createdon, "value": textBox.text, "ws":ws, "type":"id"}
+                
+                # value from Card
+                elif text_len == LENGTH_ID:
+                    
+                    var emp_no:string
+                    
+                    if operators_db.hasKey(textBox.text):
+                        # get operator No
+                        emp_no = parsetoml.getStr(operators_db[textBox.text], "000")
+                    else:
+                        emp_no = "who"
+                        
+                    val = %* {"time":createdon, "card_id": textBox.text, "emp_no":emp_no, "ws":ws, "type":"id"}
+                    
                 else:
                     val = %* {"time":createdon, "value": textBox.text, "ws":ws, "type":"unknown"}
                     
-                waitFor redc.setk(join([redis_vckey,"value"], sep=":"), $val)
-                waitFor redc.setk(join([redis_vckey,"time"], sep=":"), createdon)
-                discard waitFor redc.lPush(redis_queue, $val)
+                db.set(join([redis_key,"value"], sep=":"), $val)
+                db.set(join([redis_key,"time"], sep=":"), createdon)
+                db.push(redis_queue, $val)
                 
             #except:
             #    error("redis error")
