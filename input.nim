@@ -157,7 +157,7 @@ proc main():void =
             # set status text
             statusLabel.text = inputTextBox.text
             
-            createdon = format(now(),"yyyy-mm-dd'T'HH:mm:ss")
+            createdon = format(now(),"yyyy-MM-dd'T'HH:mm:ss")
             
             if db.enable:
                 # write data to redis
