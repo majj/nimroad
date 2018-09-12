@@ -11,7 +11,7 @@ import strutils
 import nigui
 import parsetoml
 #import redis
-import json
+#import json
 
 import lib.db_redis
 import lib.logging
@@ -34,8 +34,6 @@ let config = get_config(config_path)
 
 let app_conf = config["app"]
 
-let MAX_LENGTH_VC = parsetoml.getInt(app_conf["max_length_vc"], 6)
-let LENGTH_ID = parsetoml.getInt(app_conf["length_id"], 6)
 let ws = parsetoml.getStr(app_conf["ws"], "10")
 
 # id - empNo
@@ -166,46 +164,16 @@ proc main():void =
             createdon = format(now(),"yyyy-MM-dd'T'HH:mm:ss")
             
             if rdb.enable:
-                #debug("redis enable")
-                # write data to redis
-                
-                # 0.00 - 156.08
-                let text_len = len(inputTextBox.text)
-                #let ws = wsinputTextBox.text
-                var val : JsonNode#float
-                
-                # value from VC
-                if text_len <= MAX_LENGTH_VC:
-                    #val = parseFloat(inputTextBox.text)
-                    val = %* {"time":createdon, "value": inputTextBox.text, "ws":ws, "type":"vc"}
-                
-                # value from Card
-                elif text_len == LENGTH_ID:
-                    
-                    var emp_no:string
-                    
-                    if operators_db.hasKey(inputTextBox.text):
-                        # get operator No
-                        emp_no = parsetoml.getStr(operators_db[inputTextBox.text], "000")
-                    else:
-                        emp_no = "who"
-                        
-                    val = %* {"time":createdon, "card_id": inputTextBox.text, 
-                              "emp_no":emp_no, "ws":ws, "type":"id"}
-                    
-                else:
-                    val = %* {"time":createdon, "value": inputTextBox.text, 
-                              "ws":ws, "type":"unknown"}
-                    
-                var rtn = rdb.exec("EVALSHA", @[sha1, "1",ws, createdon, $val])
+                # write data to redis                   
+                var rtn = rdb.exec("EVALSHA", @[sha1, "1", ws, createdon, inputTextBox.text])
 
-                statusLabel.text = "status:"  & createdon & " " & rtn
+                statusLabel.text = "status:"&createdon&" "&rtn
                 
             else:
                 #debug("redis is not available")
-                statusLabel.text = "status:"  & createdon & " no redis"
+                statusLabel.text = "status:"&createdon&" no redis"
             # log
-            logTextArea.text = createdon & " -> " & inputTextBox.text & "\p" & logTextArea.text
+            logTextArea.text = createdon&" -> "&inputTextBox.text&"\p"&logTextArea.text
             
             debug(inputTextBox.text)
             
