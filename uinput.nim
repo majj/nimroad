@@ -1,10 +1,11 @@
-# input.nim
+# uinput.nim
 
-##  gather data from keyboard like devices
+##  gather data from keyboard devices(card scanner, bluetooth vernier caliper, etc.)
 
 import os
 
 import times
+import streams
 import strutils
 
 import nigui
@@ -12,7 +13,7 @@ import parsetoml
 #import redis
 import json
 
-import lib.db
+import lib.db_redis
 import lib.logging
 import lib.utils
 
@@ -39,12 +40,6 @@ let ws = parsetoml.getStr(app_conf["ws"], "10")
 
 # id - empNo
 let operators_db = config["operators"]
-
-# redis
-let redis_conf = config["redis"]
-
-let redis_key = parsetoml.getStr(redis_conf["vckey"],"vckey")       
-let redis_queue = parsetoml.getStr(redis_conf["data_queue"],"data_queue")   
     
 ###################################################################
 # set logging
@@ -78,13 +73,21 @@ proc main():void =
     
     info("start...")
     
-    var db = newDB(config)
+    var rdb = newRedisDB(config["redis"])
+    let lua_fn = parsetoml.getStr(config["redis"]["enqueue_lua"],"enqueue.lua")    
+    var fs = newFileStream(lua_fn, fmRead)    
+    let lua_script = fs.readAll()
+    
+    var sha1:string
+    
+    if rdb.enable:
+        sha1 = rdb.exec("SCRIPT", @["LOAD", lua_script])
         
     app.init()
 
     ##  var timer: Timer
     
-    var window = newWindow("Input")
+    var window = newWindow("U-Input")
     window.width  = 860
     window.height  = 532
 
@@ -147,19 +150,15 @@ proc main():void =
 
         if event.key == Key_Return:
             
-            # send to redis here
             if inputTextBox.text == "":
                 return
-            
-            # logTextArea.addLine(inputTextBox.text)
+
             textShow.text = inputTextBox.text
-            
-            # set status text
-            statusLabel.text = inputTextBox.text
             
             createdon = format(now(),"yyyy-MM-dd'T'HH:mm:ss")
             
-            if db.enable:
+            if rdb.enable:
+                #debug("redis enable")
                 # write data to redis
                 
                 # 0.00 - 156.08
@@ -183,18 +182,20 @@ proc main():void =
                     else:
                         emp_no = "who"
                         
-                    val = %* {"time":createdon, "card_id": inputTextBox.text, "emp_no":emp_no, "ws":ws, "type":"id"}
+                    val = %* {"time":createdon, "card_id": inputTextBox.text, 
+                              "emp_no":emp_no, "ws":ws, "type":"id"}
                     
                 else:
-                    val = %* {"time":createdon, "value": inputTextBox.text, "ws":ws, "type":"unknown"}
+                    val = %* {"time":createdon, "value": inputTextBox.text, 
+                              "ws":ws, "type":"unknown"}
                     
-                db.set(join([redis_key,"value"], sep=":"), $val)
-                db.set(join([redis_key,"time"], sep=":"), createdon)
-                db.push(redis_queue, $val)
+                var rtn = rdb.exec("EVALSHA", @[sha1, "1",ws, createdon, $val])
+
+                statusLabel.text = "status:"  & createdon & " " & rtn
                 
-            #except:
-            #    error("redis error")
-            
+            else:
+                #debug("redis is not available")
+                statusLabel.text = "status:"  & createdon & " no redis"
             # log
             logTextArea.text = createdon & " -> " & inputTextBox.text & "\p" & logTextArea.text
             
@@ -231,6 +232,6 @@ proc main():void =
     inputTextBox.focus()
     app.run()
 
-
+# main
 when isMainModule:
     main()

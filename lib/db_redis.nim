@@ -11,6 +11,7 @@ import parsetoml
 import redisparser 
 import redisclient
 
+import logging
 
 type 
     RedisDB*  = ref object of RootObj
@@ -20,15 +21,19 @@ type
         config: TomlValueRef
         redc: Redis    #echo redc.type.name
 
-proc newRedisDB(config: TomlValueRef): RedisDB = 
+proc newRedisDB*(config: TomlValueRef): RedisDB = 
 
     let host = parsetoml.getStr(config["host"],"localhost")    
-    let port = parsetoml.getInt(config["port"], 6379)
+    let port = parsetoml.getInt(config["port"], 6379)    
+    try:
+        let redc = open(host, Port(port))        
+        return RedisDB(config:config, redc:redc, enable:true)
+    except:
+        error("no redis")
+        return RedisDB(config:config, enable:false)
 
-    let redc = open(host, Port(port))
-    
-    return RedisDB(config:config, redc:redc)
-
-proc exec(self:RedisDB, cmd:string, params:seq[string]):string =
-
-    return $self.redc.execCommand(cmd, params)
+proc exec*(self:RedisDB, cmd:string, params:seq[string]):string =
+    if self.enable:
+        return $self.redc.execCommand(cmd, params)
+    else:
+        return "N"
