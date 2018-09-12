@@ -74,13 +74,21 @@ proc main():void =
     info("start...")
     
     var rdb = newRedisDB(config["redis"])
+    
+    let init_fn = parsetoml.getStr(config["redis"]["init_lua"],"init.lua")    
+    var fs2 = newFileStream(init_fn, fmRead)    
+    let init_script = fs2.readAll()
+    
     let lua_fn = parsetoml.getStr(config["redis"]["enqueue_lua"],"enqueue.lua")    
     var fs = newFileStream(lua_fn, fmRead)    
-    let lua_script = fs.readAll()
+    let lua_script = fs.readAll()    
     
     var sha1:string
     
     if rdb.enable:
+        
+        let rtn = rdb.exec("EVAL", @[init_script, "0"])
+        
         sha1 = rdb.exec("SCRIPT", @["LOAD", lua_script])
         
     app.init()
