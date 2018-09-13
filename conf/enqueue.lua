@@ -2,7 +2,7 @@
 --
 --  KEYS[1]  workstation
 --  ARGV[1]  timestamp
---  ARGV[2]  data (json_str)
+--  ARGV[2]  value
 
 local workstation = KEYS[1]
 
@@ -13,13 +13,14 @@ local value  = ARGV[2]
 local len = string.len(value)
 
 local data
+local emp_no
 
-if len < 7 then
+if len <=6 then
     data = cjson.encode({["time"] = timestamp, ["ws"]=workstation, 
                          ["value"] = value, ["type"] = "vc"})
-elseif len == 8 then
+elseif len == 10 then
     
-    local emp_no = redis.call("HGET", value, "id")
+    emp_no = redis.call("HGET", "user:"..value, "id")
     
     if emp_no then    
         data = cjson.encode({["time"] = timestamp, ["ws"]=workstation, 
@@ -27,6 +28,7 @@ elseif len == 8 then
     else 
         data = cjson.encode({["time"] = timestamp, ["ws"]=workstation, 
                              ["value"] = value, ["empno"] = "who", ["type"] = "id"})
+        emp_no = "who"
     end
         
 else
@@ -35,11 +37,16 @@ else
 end
 -- local emp_no = redis.call("HGET", "12388888", "id")
 
---- redis.call("SET", "user:key", key)
+--redis.call("SET", "value", value)
 --- redis.call("SET", "user:id", emp_no)
+
 redis.call("LPUSH", "data_queue", data)
 
-return 'OK'
+if emp_no then
+    return emp_no
+else
+    return value
+end
 
 -- return cjson.decode(msg)["a"]
 -- return cjson.encode({["foo"]= "bar",["ts"]="123"})

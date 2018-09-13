@@ -23,7 +23,7 @@ else:
     let sep = "/"
     
 let path = getAppDir()
-let config_path =  join([path, "conf", "input.toml"], sep=sep)
+let config_path =  join([path, "conf", "uinput.toml"], sep=sep)
 
 #create logs/ folder
 let log_path =  join([path, "logs"], sep=sep)
@@ -36,8 +36,6 @@ let app_conf = config["app"]
 
 let ws = parsetoml.getStr(app_conf["ws"], "10")
 
-# id - empNo
-let operators_db = config["operators"]
     
 ###################################################################
 # set logging
@@ -149,26 +147,17 @@ proc main():void =
     footContainer.add(statusLabel)
    
     ###########################################################################
-    var createdon: string  
-    # inputTextBox.onTextChange = proc(event: TextChangeEvent) =
-
-    inputTextBox.onKeyDown = proc(event: KeyboardEvent) = 
-
-        if event.key == Key_Return:
-            
-            if inputTextBox.text == "":
-                return
-
-            textShow.text = inputTextBox.text
-            
+    var createdon: string
+    
+    let process = proc(str:string) = 
+    
             createdon = format(now(),"yyyy-MM-dd'T'HH:mm:ss")
             
             if rdb.enable:
                 # write data to redis                   
                 var rtn = rdb.exec("EVALSHA", @[sha1, "1", ws, createdon, inputTextBox.text])
-
-                statusLabel.text = "status:"&createdon&" "&rtn
-                
+                textShow.text = rtn
+                statusLabel.text = "status:["&createdon&"] ["&rtn&"]"
             else:
                 #debug("redis is not available")
                 statusLabel.text = "status:"&createdon&" no redis"
@@ -179,6 +168,23 @@ proc main():void =
             
             inputTextBox.text = ""
             inputTextBox.focus()
+            
+    
+    
+    #########################
+    ##  inputTextBox.onTextChange = proc(event: TextChangeEvent) =
+        ##  if len(inputTextBox.text) == 10:
+            ##  process(inputTextBox.text)
+            
+    #########################
+    inputTextBox.onKeyDown = proc(event: KeyboardEvent) = 
+
+        if event.key == Key_Return:
+            if inputTextBox.text == "":
+                return
+                
+            process(inputTextBox.text)
+            #textShow.text = inputTextBox.text
             
     #########################
     logTextArea.onClick = proc(event: ClickEvent) = 
