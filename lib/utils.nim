@@ -1,6 +1,7 @@
 
-import parsetoml
+import os
 
+import parsetoml
 import logging
 
 # get current process id
@@ -21,13 +22,13 @@ proc get_config*(toml_fn: string): TomlValueRef =
 
 # helper for set logger
 
-proc get_clogger*(log_conf: TomlValueRef): ConsoleLogger =
+proc get_console_logger*(log_conf: TomlValueRef): ConsoleLogger =
 
     var clogger = logging.newConsoleLogger(lvlAll, "($datetime) [$levelid] -- $appname: ")
     
     return clogger
 
-proc get_rlogger*(log_conf: TomlValueRef): RollingFileLogger = 
+proc get_rolling_logger*(log_conf: TomlValueRef): RollingFileLogger = 
 
     let fmtStr = parsetoml.getStr(log_conf["fmt"], "($datetime) [$levelid] -- $appname: ") 
     let log_file = parsetoml.getStr(log_conf["log_file"], "app.log")
@@ -52,6 +53,37 @@ proc get_rlogger*(log_conf: TomlValueRef): RollingFileLogger =
                                 maxLines = max_lines, logFiles=backup_count, fmtStr = fmtStr, bufSize=buffer_size)
     
     return rLogger
+    
+
+type
+    HApp* = ref object of RootObj
+        config*: TomlValueRef
+
+proc newHApp*(): HApp = 
+
+    let app_path = getAppDir()
+
+    let conf_file_name = getAppFilename().splitFile().name&".toml"
+    # get config path
+    let config_path = joinPath(app_path, "conf", conf_file_name )
+    # create logs/ folder
+    let log_path =  joinPath(app_path, "logs")
+    # createDir(path)
+    discard existsOrCreateDir(log_path)
+
+    let config = get_config(config_path)
+    
+    let log_conf = config["logging"]
+
+    let rLogger = get_rolling_logger(log_conf)
+    logging.addHandler(rLogger)
+
+    let isDebug = parsetoml.getBool(config["app"]["debug"], true)    
+    if isDebug:
+        let cLogger = get_console_logger(log_conf)
+        logging.addHandler(cLogger)    
+
+    return HApp(config: config)
 
 # test
 when isMainModule:

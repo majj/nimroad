@@ -25,41 +25,27 @@ import lib.logging
 import lib.etcd_lib
 import lib.utils
 
-
-when defined(windows):
-    let sep = "\\"
-else:
-    let sep = "/"
-
 ####################################################################
 ##prepare
 
 # getCurrentDir
-#let app_name = getAppFilename()    
+##  let app_path = getAppDir()
 
-#get config path
-let path = getAppDir()
-let config_path =  join([path, "conf", "chitu.toml"], sep=sep)
+##  let conf_file_name = getAppFilename().splitFile().name&".toml"
+##  # get config path
+##  let config_path = joinPath(app_path, "conf", conf_file_name )
+##  # create logs/ folder
+##  let log_path =  joinPath(app_path, "logs")
+##  # createDir(path)
+##  discard existsOrCreateDir(log_path)
 
-#create logs/ folder
-let log_path =  join([path, "logs"], sep=sep)
-# createDir(path)
-discard existsOrCreateDir(log_path)
+##  let config = get_config(config_path)
 
-let config = get_config(config_path)
-
-echo toTomlString(config["app"])
-
+let hApp = newHApp()
+let config = hApp.config
+# echo toTomlString(config["app"])
 # get array from toml
 let influxdb_conf =  getElems(config["influxdb"])
-
-let log_conf = config["logging"]
-
-let rLogger = get_rlogger(log_conf)
-logging.addHandler(rLogger)
-
-let cLogger = get_clogger(log_conf)
-logging.addHandler(cLogger)
 
 type
     Chitu = ref object of RootObj
@@ -129,7 +115,7 @@ proc sink(self: Chitu, data: seq[JsonNode]): seq[string] =
         let measurement = getStr(item["measurement"]) # get m from json
         echo item
         data_table[measurement].add(item)
-        echo("$1$2$3.yaml".format("conf", sep, measurement))
+        #echo("$1$2$3.yaml".format("conf", sep, measurement))
         
     echo data_table
     
