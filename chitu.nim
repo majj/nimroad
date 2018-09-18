@@ -10,6 +10,9 @@
 ##  when failed then ping influxdb.
 ##
 
+# =======
+# Imports
+# =======
 import os
 import strutils
 import times
@@ -25,21 +28,6 @@ import lib.logging
 import lib.etcd_lib
 import lib.utils
 
-####################################################################
-##prepare
-
-# getCurrentDir
-##  let app_path = getAppDir()
-
-##  let conf_file_name = getAppFilename().splitFile().name&".toml"
-##  # get config path
-##  let config_path = joinPath(app_path, "conf", conf_file_name )
-##  # create logs/ folder
-##  let log_path =  joinPath(app_path, "logs")
-##  # createDir(path)
-##  discard existsOrCreateDir(log_path)
-
-##  let config = get_config(config_path)
 
 let hApp = newHApp()
 let config = hApp.config
@@ -62,17 +50,6 @@ proc newChitu(config: TomlValueRef): Chitu =
     return Chitu(config: config)
        
 proc get_data_from_redis(self: Chitu): seq[JsonNode] = 
-    let v1: JsonNode = %* {"measurement":"mts", "tags":{"eqptno":"mts02"}, 
-                           "fields":{"val1":"2i","val2":"3.3","val3":"i"}, "time":100}
-                           
-    let v2: JsonNode = %* {"measurement":"mts", "tags":{"eqptno":"mts02"}, 
-                           "fields":{"val1":"2i","val2":"3.3","val3":"i"}, "time":200}
-    
-    result.add(v1)    
-    result.add(v2)
-
-proc get_data_from_sqlite(self: Chitu): seq[JsonNode] = 
-
     let v1: JsonNode = %* {"measurement":"mts", "tags":{"eqptno":"mts02"}, 
                            "fields":{"val1":"2i","val2":"3.3","val3":"i"}, "time":100}
                            
@@ -143,10 +120,10 @@ proc enqueue(self: Chitu, data: seq[JsonNode], status: seq[string]):void =
     
     echo data, status
 
+
 proc main():void = 
     
-    info("start")
-    info("single thread")
+    info("start chitu")
     
     let chitu: Chitu = newChitu(config)
 
@@ -174,7 +151,7 @@ proc main():void =
                     
                 sleep(1000) # sleep 1s
             else:
-                sleep(100) # sleep 10ms
+                sleep(10) # sleep 10ms
                 
             let t2 = epochTime()
             

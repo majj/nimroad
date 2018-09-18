@@ -39,9 +39,9 @@ proc main():void =
     var sha1:string
     
     if rdb.enable:
-        
+        # run init.lua to load initial data. 
         let rtn = rdb.exec("EVAL", @[init_script, "0"])
-        
+        # load lua script
         sha1 = rdb.exec("SCRIPT", @["LOAD", lua_script])
         
     app.init()
@@ -117,7 +117,11 @@ proc main():void =
                 statusLabel.text = "status:["&createdon&"] ["&rtn&"]"
             else:
                 #debug("redis is not available")
-                statusLabel.text = "status:"&createdon&" no redis"
+                # try to reconnect redis
+                textShow.text = "no redis!"
+                rdb = newRedisDB(config["redis"])
+                
+                statusLabel.text = "status:"&createdon&" no redis!"
             # log
             logTextArea.text = createdon&" -> "&inputTextBox.text&"\p"&logTextArea.text
             
@@ -169,6 +173,7 @@ proc main():void =
     window.show()
     
     inputTextBox.focus()
+    
     app.run()
 
 # main

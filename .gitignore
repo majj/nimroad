@@ -6,6 +6,7 @@ test/
 
 # bin
 *.exe
+*.dll
 *.pid
 
 # config

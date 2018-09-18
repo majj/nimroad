@@ -1,8 +1,15 @@
 
+# =======
+# Imports
+# =======
 import os
 
 import parsetoml
 import logging
+
+# =========
+# Functions
+# =========
 
 # get current process id
 when defined(windows):
@@ -54,11 +61,16 @@ proc get_rolling_logger*(log_conf: TomlValueRef): RollingFileLogger =
     
     return rLogger
     
-
+# =====
+# Types
+# =====
 type
     HApp* = ref object of RootObj
+        # common functions for the App
         config*: TomlValueRef
-
+# ================
+# Public Functions
+# ================
 proc newHApp*(): HApp = 
 
     let app_path = getAppDir()
@@ -78,8 +90,8 @@ proc newHApp*(): HApp =
     let rLogger = get_rolling_logger(log_conf)
     logging.addHandler(rLogger)
 
-    let isDebug = parsetoml.getBool(config["app"]["debug"], true)    
-    if isDebug:
+    let ConsoleLog = parsetoml.getBool(config["app"]["console_log"], true)
+    if ConsoleLog:
         let cLogger = get_console_logger(log_conf)
         logging.addHandler(cLogger)    
 
