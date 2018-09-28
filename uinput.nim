@@ -26,7 +26,7 @@ proc main():void =
     
     info("start...")
     
-    var rdb = newRedisDB(config["redis"])
+    #var rdb = newRedisDB(config["redis"])
     
     let init_fn = parsetoml.getStr(config["redis"]["init_lua"],"init.lua")    
     var fs2 = newFileStream(init_fn, fmRead)    
@@ -38,11 +38,11 @@ proc main():void =
     
     var sha1:string
     
-    if rdb.enable:
-        # run init.lua to load initial data. 
-        let rtn = rdb.exec("EVAL", @[init_script, "0"])
-        # load lua script
-        sha1 = rdb.exec("SCRIPT", @["LOAD", lua_script])
+    ##  if rdb.enable:
+        ##  # run init.lua to load initial data. 
+        ##  let rtn = rdb.exec("EVAL", @[init_script, "0"])
+        ##  # load lua script
+        ##  sha1 = rdb.exec("SCRIPT", @["LOAD", lua_script])
         
     app.init()
 
@@ -106,22 +106,37 @@ proc main():void =
     ###########################################################################
     var createdon: string
     
-    let process = proc(str:string) = 
+    var get_rdb =   proc():RedisDB =
+    
+        let rdb = newRedisDB(config["redis"])
+        if rdb.enable:
+            let rtn = rdb.exec("EVAL", @[init_script, "0"])
+            # load lua script
+            sha1 = rdb.exec("SCRIPT", @["LOAD", lua_script])  
+            #textShow.text = "please do again"                    
+        else:
+            textShow.text = "no redis!"
+            statusLabel.text = "status:"&createdon&" no redis!"
+            
+        return rdb
+    
+    var rdb = get_rdb()
+    
+    let process = proc(inputText:string) = 
     
             createdon = format(now(),"yyyy-MM-dd'T'HH:mm:ss")
             
+            if not rdb.enable:
+                # write data to redis  
+                rdb = get_rdb()                
+            
             if rdb.enable:
-                # write data to redis                   
                 var rtn = rdb.exec("EVALSHA", @[sha1, "1", ws, createdon, inputTextBox.text])
                 textShow.text = rtn
                 statusLabel.text = "status:["&createdon&"] ["&rtn&"]"
             else:
-                #debug("redis is not available")
-                # try to reconnect redis
-                textShow.text = "no redis!"
-                rdb = newRedisDB(config["redis"])
-                
-                statusLabel.text = "status:"&createdon&" no redis!"
+                textShow.text = "please do again"  
+
             # log
             logTextArea.text = createdon&" -> "&inputTextBox.text&"\p"&logTextArea.text
             
@@ -129,9 +144,7 @@ proc main():void =
             
             inputTextBox.text = ""
             inputTextBox.focus()
-            
-    
-    
+        
     #########################
     ##  inputTextBox.onTextChange = proc(event: TextChangeEvent) =
         ##  if len(inputTextBox.text) == 10:
@@ -163,12 +176,12 @@ proc main():void =
         logTextArea.text = ""
         inputTextBox.focus()
         
-    ##  proc work(event: TimerEvent) =
+    ##  proc ping(event: TimerEvent) =
         ##  timer.stop()
-        ##  info("work...")
-        ##  timer = startTimer(3000, work)
+        ##  info(rdb.exec("PING", @[]))
+        ##  timer = startTimer(3000, ping)
         
-    ##  timer = startTimer(3000, work)
+    ##  timer = startTimer(3000, ping)
 
     window.show()
     
