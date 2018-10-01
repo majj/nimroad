@@ -48,13 +48,18 @@ proc main() =
     var receiveBuffer = newString(1024)
     while true:
         
-      #var msg:string = "M1T X+12.68mm Y-15.79mm Z+25.68mm\r\n"
-      let rtn = port.write(msg)
-      #echo rtn
-      let numReceived = port.read(receiveBuffer)
-      echo getClockStr() & "," & receiveBuffer[0 ..< numReceived]
-      #discard port.write(receiveBuffer[0 ..< numReceived])
-      sleep(1000)
+        #var msg:string = "M1T X+12.68mm Y-15.79mm Z+25.68mm\r\n"
+        try:
+            let rtn = port.write(msg)
+            #echo rtn
+            let numReceived = port.read(receiveBuffer)
+            echo getClockStr() & "," & receiveBuffer[0 ..< numReceived]
+            #discard port.write(receiveBuffer[0 ..< numReceived])
+            #sleep(1000)
+        except:
+            let msg = getCurrentExceptionMsg()
+            echo(msg)
+            sleep(1000)
 
 
 when isMainModule:
