@@ -17,17 +17,15 @@ proc main() =
 
     get_ports()
 
-
     let port = newSerialPort("COM5")
-    # use 9600bps, no parity, 8 data bits and 1 stop bit
-    port.open(9600, Parity.None, 8, StopBits.One)
-
-    # You can modify the baud rate, parity, databits, etc. after opening the port
-    ##  port.baudRate = 2400
+    
+    port.open(9600, Parity(1), 8, StopBits(1))
 
     var receiveBuffer = newString(1024)
     while true:
-      let rtn = port.write("abc")
+        
+      var msg:string = "M1T X+12.68mm Y-15.79mm Z+25.68mm\r\n"
+      let rtn = port.write(msg)
       echo rtn  
       let numReceived = port.read(receiveBuffer)
       echo getClockStr() & "," & receiveBuffer[0 ..< numReceived]

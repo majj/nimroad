@@ -24,9 +24,9 @@ import typetraits
 import parsetoml
 import redis
 
-import lib.logging
-import lib.etcd_lib
-import lib.utils
+import lib/logging
+import lib/etcd_lib
+import lib/utils
 
 
 let hApp = newHApp()

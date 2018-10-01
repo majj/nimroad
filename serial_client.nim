@@ -14,18 +14,11 @@ proc get_ports() =
     echo port_list
       
 proc main() = 
-
     get_ports()
-
-
     let port = newSerialPort("COM6")
-    port.close()
-    # use 9600bps, no parity, 8 data bits and 1 stop bit
-    port.open(9600, Parity.None, 8, StopBits.One)
-
-    # You can modify the baud rate, parity, databits, etc. after opening the port
-    ##  port.baudRate = 2400
-
+    ##  Parity:,    ##  None = 0,    ##  Odd = 1,    ##  Even = 2,    
+    ##  StopBits:    ##  One = 1,    ##  Two = 2,    ##  OnePointFive = 3    
+    port.open(9600, Parity(1), 8, StopBits(1))
     var receiveBuffer = newString(1024)
     while true:
       #let rtn = port.write("abc")

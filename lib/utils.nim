@@ -31,7 +31,9 @@ proc get_config*(toml_fn: string): TomlValueRef =
 
 proc get_console_logger*(log_conf: TomlValueRef): ConsoleLogger =
 
-    var clogger = logging.newConsoleLogger(lvlAll, "($datetime) [$levelid] -- $appname: ")
+    let fmtStr = parsetoml.getStr(log_conf["fmt"], "($datetime) [$levelid] -- $appname: ") 
+    
+    var clogger = logging.newConsoleLogger(lvlAll, fmtStr)
     
     return clogger
 
@@ -65,7 +67,7 @@ proc get_rolling_logger*(log_conf: TomlValueRef): RollingFileLogger =
 # Types
 # =====
 type
-    HApp* = ref object of RootObj
+    HApp* = ref object of RootObj  # HApp: helper App
         # common functions for the App
         config*: TomlValueRef
 # ================
@@ -89,7 +91,9 @@ proc newHApp*(): HApp =
 
     let rLogger = get_rolling_logger(log_conf)
     logging.addHandler(rLogger)
-
+    
+    ##  debug(conf_file_name)
+    
     let ConsoleLog = parsetoml.getBool(config["app"]["console_log"], true)
     if ConsoleLog:
         let cLogger = get_console_logger(log_conf)
