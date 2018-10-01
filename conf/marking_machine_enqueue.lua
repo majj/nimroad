@@ -1,6 +1,7 @@
 
 -- Marking Machine
--- Format£º M1T(P)[SP]X¡À12345.678mm[SP]Y¡À12345.678mm[SP]Z¡À12345.678mm[LF][CR]
+-- Format£º M1T(P)[SP]X+12345.678mm[SP]Y-12345.678mm[SP]Z+12345.678mm[LF][CR]
+-- unit: mm
 -- P:Test Point£¬T:Trace
 -- "M1T X+12.68mm Y-15.79mm Z+25.68mm\r\n"
 
@@ -18,9 +19,9 @@ local sep = "%s"
 local i=1
 
 local output_json
-
+-- workstation
 output['ws'] = workstation
-
+-- timrestamp
 output['ts'] = tonumber(timestamp)
 
 for str in string.gmatch(input, "([^"..sep.."]+)") do
@@ -28,15 +29,15 @@ for str in string.gmatch(input, "([^"..sep.."]+)") do
     if i == 1 then 
         output['type'] = string.sub(str, 3)
     else
-        -- t[string.sub(str, 1, 1)] = tostring( tonumber(string.sub(str, 2, -3)))
-        output[string.lower(string.sub(str, 1,1))] =  tonumber(string.sub(str, 2, -3))
+        output[string.lower(string.sub(str, 1,1))] 
+                =  tonumber(string.sub(str, 2, -3))
     end
     
     i = i + 1
 end
 -- output json
 output_json = cjson.encode(output)
-
+-- SET
 redis.call("SET", "MarkingMachine",output_json)
-
+-- RPOP
 return output_json

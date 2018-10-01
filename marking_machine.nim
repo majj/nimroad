@@ -38,10 +38,11 @@ proc main() =
     let machine = config["machine"]
     
     let portName = parsetoml.getStr(machine["port"])
-    let baud_rate = parsetoml.getInt(machine["baudRate"])
-    let dataBits = parsetoml.getInt(machine["dataBits"])
+    let baud_rate = int32(parsetoml.getInt(machine["baudRate"]))
+    let dataBits = byte(parsetoml.getInt(machine["dataBits"]))
     let parity = parsetoml.getInt(machine["parity"])
     let stopBits = parsetoml.getInt(machine["stopBits"])
+    let timeout = int32(parsetoml.getInt(machine["timeout"]))
     
     let buffer_len = parsetoml.getInt(machine["buffer_len"])
     
@@ -65,8 +66,8 @@ proc main() =
         sha1 = rdb.exec("SCRIPT", @["LOAD", lua_script])     
     
     ## open Serial Port
-    port.open(int32(baud_rate), Parity(parity), byte(dataBits), 
-              StopBits(stopBits), readTimeout = 1000)
+    port.open(baud_rate, Parity(parity), dataBits, 
+              StopBits(stopBits), readTimeout = timeout)
     
     var receiveBuffer = newString(buffer_len)
     
