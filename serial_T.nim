@@ -1,14 +1,24 @@
+## serial_T.nim
 
-import os
-import serial # Or: `import serial/utils`
-import times
+##  COM1 --------------- COM2
+##       ------/ \------  
+##             | |
+##             | |
+##            Redis
 
 import asyncdispatch 
+import os
+import strutils
+import streams
+import times
 
+import serial # Or: `import serial/utils`
 import parsetoml
 
+import lib/db_redis
 import lib/logging
 import lib/utils
+
 
 let hApp = newHApp()
 let config = hApp.config
@@ -24,7 +34,11 @@ proc get_ports() =
     echo port_list
       
 proc main() = 
-
+    
+    info("start T...")
+    
+    let workstation = parsetoml.getStr(config["app"]["ws"])
+    
     ## rs232
     let machine = config["machine"]
     
@@ -43,19 +57,37 @@ proc main() =
 
     get_ports()
 
+    ## open two ports
     let port1 = newSerialPort(portName1)
     let port2 = newSerialPort(portName2)
     
-    ## open Serial Port
+    ## open Serial Port1
     port1.open(baud_rate, Parity(parity), byteSize, 
               StopBits(stopBits), readTimeout = timeout)
-
+    ## open Serial Port2
     port2.open(baud_rate, Parity(parity), byteSize, 
               StopBits(stopBits), readTimeout = timeout)
               
               
     var receiveBuffer1 = newString(1024)
     var receiveBuffer2 = newString(1024)
+    
+    ## redis
+    let init_fn = parsetoml.getStr(config["redis"]["init_lua"],"init.lua")    
+    var fs2 = newFileStream(init_fn, fmRead)    
+    let init_script = fs2.readAll()
+    
+    let lua_fn = parsetoml.getStr(config["redis"]["enqueue_lua"],"enqueue.lua")    
+    var fs = newFileStream(lua_fn, fmRead)    
+    let lua_script = fs.readAll()    
+    
+    var sha1:string    
+    
+    let rdb = newRedisDB(config["redis"])
+    if rdb.enable:
+        let rtn = rdb.exec("EVAL", @[init_script, "0"])
+        ##  # load lua script
+        sha1 = rdb.exec("SCRIPT", @["LOAD", lua_script])     
     
     while true:
         
@@ -72,6 +104,11 @@ proc main() =
             if numReceived2 > 0:
                 echo portName2 & " -> " & getClockStr() & "," & receiveBuffer2[0 ..< numReceived2]
                 discard port1.write(receiveBuffer2[0 ..< numReceived2])
+                
+                let ts = epochTime().formatFloat(ffDecimal, 4)
+
+                let eval_rtn = rdb.exec("EVALSHA", @[sha1, "1", workstation, ts, receiveBuffer2[0 ..< numReceived2]])
+                echo eval_rtn                
                 
                 
             sleep(10)            

@@ -29,7 +29,9 @@ proc get_ports():seq[string] =
 proc main() = 
 
     info("start...")    
-
+    
+    let workstation = parsetoml.getStr(config["app"]["ws"])
+    
     let port_list = get_ports()
     
     info("RS232 Ports: " & port_list.join(sep=","))
@@ -97,7 +99,7 @@ proc main() =
 
         let ts = epochTime().formatFloat(ffDecimal, 4)
 
-        let eval_rtn = rdb.exec("EVALSHA", @[sha1, "1", "ws", ts, receiveBuffer[0 ..< numReceived]])
+        let eval_rtn = rdb.exec("EVALSHA", @[sha1, "1", workstation, ts, receiveBuffer[0 ..< numReceived]])
         echo eval_rtn
         ## write
         discard port.write(receiveBuffer[0 ..< numReceived])
