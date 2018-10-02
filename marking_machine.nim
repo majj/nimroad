@@ -1,3 +1,4 @@
+## marking_machine.nim
 
 import os
 import strutils
@@ -27,19 +28,20 @@ proc get_ports():seq[string] =
     
 proc main() = 
 
-    info("start...")
-    
+    info("start...")    
 
     let port_list = get_ports()
     
-    info(port_list.join(sep=","))
+    info("RS232 Ports: " & port_list.join(sep=","))
+    
+    let INTERVAL = parsetoml.getInt(config["app"]["interval"])
     
     ## rs232
     let machine = config["machine"]
     
     let portName = parsetoml.getStr(machine["port"])
     let baud_rate = int32(parsetoml.getInt(machine["baudRate"]))
-    let dataBits = byte(parsetoml.getInt(machine["dataBits"]))
+    let byteSize = byte(parsetoml.getInt(machine["byteSize"]))
     let parity = parsetoml.getInt(machine["parity"])
     let stopBits = parsetoml.getInt(machine["stopBits"])
     let timeout = int32(parsetoml.getInt(machine["timeout"]))
@@ -66,7 +68,7 @@ proc main() =
         sha1 = rdb.exec("SCRIPT", @["LOAD", lua_script])     
     
     ## open Serial Port
-    port.open(baud_rate, Parity(parity), dataBits, 
+    port.open(baud_rate, Parity(parity), byteSize, 
               StopBits(stopBits), readTimeout = timeout)
     
     var receiveBuffer = newString(buffer_len)
@@ -75,10 +77,8 @@ proc main() =
     
     while true:
         #let rtn = port.write("abc")
-        #echo rtn        
-
+        #echo rtn
         ##  createdon = format(now(),"yyyy-MM-dd'T'HH:mm:ss")
-      
         try:
             ## read
             numReceived = port.read(receiveBuffer)
@@ -97,12 +97,12 @@ proc main() =
 
         let ts = epochTime().formatFloat(ffDecimal, 4)
 
-        var rtn2 = rdb.exec("EVALSHA", @[sha1, "1", "ws", ts, receiveBuffer[0 ..< numReceived]])
-        echo "return: " & rtn2
+        let eval_rtn = rdb.exec("EVALSHA", @[sha1, "1", "ws", ts, receiveBuffer[0 ..< numReceived]])
+        echo eval_rtn
         ## write
         discard port.write(receiveBuffer[0 ..< numReceived])
-
-        sleep(1000)
+        ## sleep in ms
+        sleep(INTERVAL)
     
     #port.close()
 

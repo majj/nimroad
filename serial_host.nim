@@ -28,7 +28,7 @@ proc main() =
     
     let portName = parsetoml.getStr(machine["port"])
     let baud_rate = int32(parsetoml.getInt(machine["baudRate"]))
-    let dataBits = byte(parsetoml.getInt(machine["dataBits"]))
+    let byteSize = byte(parsetoml.getInt(machine["byteSize"]))
     let parity = parsetoml.getInt(machine["parity"])
     let stopBits = parsetoml.getInt(machine["stopBits"])
     let timeout = int32(parsetoml.getInt(machine["timeout"]))
@@ -42,7 +42,7 @@ proc main() =
     let port = newSerialPort(portName)
     
     ## open Serial Port
-    port.open(baud_rate, Parity(parity), dataBits, 
+    port.open(baud_rate, Parity(parity), byteSize, 
               StopBits(stopBits), readTimeout = timeout)
 
     var receiveBuffer = newString(1024)

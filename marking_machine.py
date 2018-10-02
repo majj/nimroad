@@ -6,8 +6,18 @@ import redis
 import serial
 import serial.tools.list_ports
 
+REDIS_HOST = 'localhost'
+REDIS_PORT = 6379
+
 PORT = "COM6"
 BAUDRATE = 9600
+BYTESIZE = 8
+PARITY = serial.PARITY_ODD
+STOPBITS = 1
+
+INTERVAL = 0.6
+
+MSG = b"M1T X+12.68mm Y+15.79mm Z+25.68mm\r\n"
 
 def main():
     
@@ -16,7 +26,7 @@ def main():
         print(p[0])
 
     ## redis client
-    red = redis.StrictRedis(host='localhost', port=6379, db=0)
+    red = redis.StrictRedis(host=REDIS_HOST, port=REDIS_PORT, db=0)
     
     ## init script
     with open("conf/marking_machine_init.lua","r") as fh:
@@ -32,11 +42,9 @@ def main():
     #print(lua)
     multiply = red.register_script(lua)
     
-    timestamp = 1234456777
-    
     ## open serial port
-    port = serial.Serial(port=PORT, baudrate=BAUDRATE, bytesize=8, 
-                         parity=serial.PARITY_ODD, stopbits=1, timeout=0)
+    port = serial.Serial(port=PORT, baudrate=BAUDRATE, bytesize=BYTESIZE, 
+                         parity=PARITY, stopbits=STOPBITS, timeout=0)
     ## loop
     while True:
         ## read msg from serial port
@@ -49,12 +57,13 @@ def main():
             
             print(y)
             
-            port.write(b"M1T X+12.68mm Y+15.79mm Z+25.68mm\r\n")
+            port.write(MSG)
         
         else:
-            port.write(b"M1T X+12.68mm Y-25.79mm Z+25.68mm\r\n")
+            print("no data")
+            port.write(MSG)
             
-        time.sleep(0.6)
+        time.sleep(INTERVAL)
    
 if __name__ == "__main__"    :
     
