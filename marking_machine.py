@@ -9,7 +9,7 @@ import serial.tools.list_ports
 REDIS_HOST = 'localhost'
 REDIS_PORT = 6379
 
-PORT = "COM6"
+PORT = "COM8"
 BAUDRATE = 9600
 BYTESIZE = 8
 PARITY = serial.PARITY_ODD
@@ -21,9 +21,11 @@ MSG = b"M1T X+12.68mm Y+15.79mm Z+25.68mm\r\n"
 
 def main():
     
-    plist = list(serial.tools.list_ports.comports())    
+    plist = list(serial.tools.list_ports.comports())
+    print("RS232 Ports: ", end="")
     for p in plist:
-        print(p[0])
+        print(p[0], end=",")
+    print()
 
     ## redis client
     red = redis.StrictRedis(host=REDIS_HOST, port=REDIS_PORT, db=0)
@@ -45,7 +47,7 @@ def main():
     ## open serial port
     port = serial.Serial(port=PORT, baudrate=BAUDRATE, bytesize=BYTESIZE, 
                          parity=PARITY, stopbits=STOPBITS, timeout=0)
-    ## loop
+    ## loop here
     while True:
         ## read msg from serial port
         msg = port.readall()
