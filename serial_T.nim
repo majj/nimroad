@@ -1,23 +1,28 @@
 ## serial_T.nim
-
+##
+## 
 ##  COM1 --------------- COM2
 ##       ------/ \------  
 ##             | |
 ##             | |
 ##            Redis
+##
 
-import asyncdispatch 
-import os
-import strutils
-import streams
-import times
+import 
+    asyncdispatch,
+    os,
+    strutils,
+    streams,
+    times
 
-import serial # Or: `import serial/utils`
-import parsetoml
+import 
+    serial, # Or: `import serial/utils`
+    parsetoml
 
-import lib/db_redis
-import lib/logging
-import lib/utils
+import
+    lib/db_redis,
+    lib/logging,
+    lib/utils
 
 
 let hApp = newHApp()
@@ -31,19 +36,20 @@ proc get_ports() =
       ##  echo port
       port_list.add(port)
       
-    echo port_list
+    debug(port_list.join(sep=";"))
       
 proc main() = 
     
     info("start T...")
     
+    let INTERVAL = parsetoml.getInt(config["app"]["interval"])
     let workstation = parsetoml.getStr(config["app"]["ws"])
     
     ## rs232
     let machine = config["machine"]
     
-    let portName1 = parsetoml.getStr(machine["port1"])
-    let portName2 = parsetoml.getStr(machine["port2"])
+    let portName1 = parsetoml.getStr(machine["port_upper"])
+    let portName2 = parsetoml.getStr(machine["port_machine"])
     
     let baud_rate = int32(parsetoml.getInt(machine["baudRate"]))
     let byteSize = byte(parsetoml.getInt(machine["byteSize"]))
@@ -58,8 +64,8 @@ proc main() =
     get_ports()
 
     ## open two ports
-    let port1 = newSerialPort(portName1)
-    let port2 = newSerialPort(portName2)
+    let port1 = newSerialPort(portName1)  # upper computer
+    let port2 = newSerialPort(portName2)  # machine
     
     ## open Serial Port1
     port1.open(baud_rate, Parity(parity), byteSize, 
@@ -97,27 +103,33 @@ proc main() =
             #echo rtn
             let numReceived1 = port1.read(receiveBuffer1)
             if numReceived1 > 0:
-                echo portName1 & " -> " &  getClockStr() & "," & receiveBuffer1[0 ..< numReceived1]
+                ## upper computer to machine
+                debug( portName1 & " -> " &  getClockStr() & "," & receiveBuffer1[0 ..< numReceived1] )
                 discard port2.write(receiveBuffer1[0 ..< numReceived1])
 
             let numReceived2 = port2.read(receiveBuffer2)
             if numReceived2 > 0:
-                echo portName2 & " -> " & getClockStr() & "," & receiveBuffer2[0 ..< numReceived2]
+                ## machine to upper computer
+                debug( portName2 & " -> " & getClockStr() & "," & receiveBuffer2[0 ..< numReceived2] )
                 discard port1.write(receiveBuffer2[0 ..< numReceived2])
                 
                 let ts = epochTime().formatFloat(ffDecimal, 4)
 
                 let eval_rtn = rdb.exec("EVALSHA", @[sha1, "1", workstation, ts, receiveBuffer2[0 ..< numReceived2]])
-                echo eval_rtn                
+                debug( eval_rtn )
                 
-                
-            sleep(10)            
+            ## loop interval
+            sleep(INTERVAL)            
             
-        except:
+        except TimeoutError:            
             let msg = getCurrentExceptionMsg()
-            echo(msg)
+            warn(msg)
+            sleep(1000)            
+        except:            
+            warn( getCurrentException().name )
+            let msg = getCurrentExceptionMsg()
+            error(msg)
             sleep(1000)
-
 
 when isMainModule:
     
