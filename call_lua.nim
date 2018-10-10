@@ -49,7 +49,9 @@ proc main() =
         echo (L.toString(-1))        
         #echo @[getTotalMem(),getOccupiedMem(), getFreeMem()]
         echo "------------------>",i
-
+        
+        sleep(3000)
+        
     L.close()
 
 

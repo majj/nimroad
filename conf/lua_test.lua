@@ -8,8 +8,18 @@ local lpeg = require "lpeg"
 
 
 
-local y = cjson.decode('{"21":"1","1x11":"hello"}')
+
+
+
+
+local ts = os.time()
+local val = math.cos(ts)
+print(val)
+
+print(ts)
+
+local t = cjson.encode({ts=ts, val = "val="..val })
+
+local y = cjson.decode(t)
 
 print(cjson.encode(y))
-
-
