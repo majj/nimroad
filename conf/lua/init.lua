@@ -15,16 +15,20 @@
         fail count
         errorlist
         timestamp
+        
 - sqlite
     db
         stats
         timestamp
+        
 - equipment(device)
     name
         status
         heartbeat timestamp
+        
 - data_queue
-- retry queue
+
+- retry_queue
 
 --]]
 
