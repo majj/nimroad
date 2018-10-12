@@ -4,6 +4,15 @@
 # nimble install https://github.com/xmonader/nim-redisclient
 #
 
+## Example
+## -------
+##
+## .. code-block::nim
+##
+##
+##
+
+
 import asyncdispatch
 
 import parsetoml
