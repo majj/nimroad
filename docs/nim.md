@@ -1,4 +1,5 @@
 
+- [Nim asyncdispatch](https://nim-lang.org/docs/asyncdispatch.html)
 
 - [nimLUA](https://github.com/jangko/nimLUA)
 
@@ -9,5 +10,10 @@
 - [redisclient](https://github.com/xmonader/nim-redisclient)
 
 - [libsodium](https://github.com/FedericoCeratto/nim-libsodium)
+
+- [etcd-client](https://github.com/FedericoCeratto/nim-etcd-client)
+
+- [serial](https://github.com/euantorano/serial.nim)
+
 
 

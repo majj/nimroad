@@ -10,3 +10,6 @@ skipDirs      = @["test"]
 # Deps
 
 requires  "nim >= 0.18.1"
+
+requires "serial >= 1.0.0"
+

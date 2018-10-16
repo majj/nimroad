@@ -1,5 +1,13 @@
 
-# build lib for Lua 5.3
+# build lib for Lua 5.3 (Windows)
+
+## MingW-64
+
+[MinGW-W64-install.exe] (https://sourceforge.net/projects/mingw-w64/files/)
+
+## Lua 5.3
+
+
 
 ## cjson
 
